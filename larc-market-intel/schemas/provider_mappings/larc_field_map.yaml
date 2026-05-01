@@ -1,0 +1,184 @@
+# LARC Field Mapping to Canonical Schema
+# Applies to both LARC PDF Market Intelligence Reports and LARC HotelBIS xlsx data files.
+# Version: 1.0.0
+# Schema: v1.0.0
+
+provider: LARC
+
+# ============================================================================
+# XLSX MAPPING (HotelBIS_Data_File)
+# Source: Flat table, 1 row per (Market, Year, Period)
+# ============================================================================
+xlsx:
+  sheet_name: "Sheet1"
+  row_identifier:
+    market_col: "Market"
+    year_col: "Year"
+    period_col: "Period"  # 1-4 or 'A' for annual
+  publication_metadata:
+    publication_date_col: "Published"   # format '2026-03'
+    publication_date_format: "%Y-%m"
+  column_map:
+    # XLSX column         → canonical ForecastPeriod field
+    "Supply":              "supply"
+    "Demand":              "demand"
+    "Occupancy":           "occupancy"            # already decimal
+    "ADR":                 "adr"
+    "RevPAR":              "revpar"
+    "Revenues":            "revenues"
+    "Wage Growth":         "wage_growth_pct"      # already decimal
+    "Property Tax Growth": "property_tax_growth_pct"
+    "Hotel EBITDA Margin": "hotel_ebitda_margin"
+    "Hotel EBITDA":        "hotel_ebitda"
+    "Cap Rate":            "cap_rate"
+    "Hotel Value (Indexed to 2019)": "hotel_value_index_2019"
+  period_type_resolver:
+    # When Period == 'A', this is annual; otherwise quarterly with quarter = int(Period)
+    annual_marker: "A"
+  is_forecast_resolver:
+    # Rows with Year >= forecast_start_year AND Period NOT yet reported are forecast.
+    # In absence of explicit flag, treat any row where Year > max(Year where actual data exists) as forecast.
+    # For LARC 2026-03 publication, forecast starts 1Q-2026.
+    forecast_start_rule: "year_quarter >= publication_year_quarter"
+
+# ============================================================================
+# PDF MAPPING (Market Intelligence Report)
+# Source: PDF with mixed tables, charts, and narrative.
+# Extraction strategy: Claude API structured output per section.
+# ============================================================================
+pdf:
+  sections:
+    # Each section maps to canonical schema targets.
+
+    - larc_heading: "Summary"
+      canonical_section: "executive_summary"
+      extract:
+        - narrative                    # prose → Narrative table
+        - forecast_summary.cagr_5yr    # "RevPAR will increase at a 3.3% CAGR"
+        - forecast_summary.ranking_among_markets
+
+    - larc_heading: "Denver Forecast Summary"  # annual table, page 2
+      canonical_section: null
+      extract:
+        - forecast_period[period_type=annual]
+
+    - larc_heading: "Denver Quarterly Operating Forecast Summary"
+      canonical_section: null
+      extract:
+        - forecast_period[period_type=quarterly]
+
+    - larc_heading: "National Forecast Backdrop"
+      canonical_section: "national_backdrop"
+      extract:
+        - narrative
+
+    - larc_heading: "Operating Results Review"
+      canonical_section: "operating_results_review"
+      extract:
+        - narrative
+
+    - larc_heading: "MSA Economic Summary"
+      canonical_section: "msa_economic_summary"
+      extract:
+        - narrative
+        - economic_indicators           # GMP CAGR, non-farm jobs, unemployment
+
+    - larc_heading: "Major Local Real Estate Developments"
+      canonical_section: "major_local_real_estate_developments"
+      extract:
+        - narrative                     # entity-tagged: development_project
+
+    - larc_heading: "Lodging Demand Drivers"
+      canonical_section: "lodging_demand_drivers"
+      subsection_map:
+        "Convention Center": "convention_center"
+        "Air Traffic": "air_traffic"
+        "Office Market": "office_market"
+
+    - larc_heading: "Lodging Supply"
+      canonical_section: "lodging_supply"
+      extract:
+        - narrative
+        - supply_pipeline               # Select Hotel Developments table
+      tables:
+        "Lodging Supply Growth":
+          target: forecast_period       # supplements xlsx, enables cross-check
+          is_forecast_resolver: "marked with F"
+        "Submarket Supply & Openings": null  # currently dropped; not in canonical
+        "Select Hotel Developments":
+          target: supply_pipeline
+          columns:
+            "Hotel": "hotel_name"
+            "Submarket": "submarket"
+            "Rooms": "rooms"
+            "Development Phase": "development_phase"
+            "Projected Opening": "projected_opening"
+
+    - larc_heading: "Home Sharing Supply"
+      canonical_section: "home_sharing_supply"
+
+    - larc_heading: "Recent Transactions"
+      canonical_section: "recent_transactions"
+      extract:
+        - narrative
+        - transactions                  # "Recent Hotel Transactions ($15m+)" table
+      tables:
+        "Recent Hotel Transactions":
+          target: transaction
+          columns:
+            "Property Name": "property_name"
+            "Date": "sale_date"
+            "Submarket": "submarket"
+            "Units": "units"
+            "Price (000)": "price_total_usd"   # multiply by 1000
+            "Price /Unit (000)": "price_per_unit_usd"  # multiply by 1000
+            "Owner/Buyer": "buyer"
+            "Seller": "seller"
+            "LARC Score": "larc_score"
+
+    - larc_heading: "Revenue Forecast Models"
+      canonical_section: "revenue_forecast_models"
+      extract:
+        - forecast_summary.revpar_model
+        - forecast_summary.adr_model
+        - sensitivity_table
+
+    - larc_heading: "EBITDA Forecast"
+      canonical_section: "ebitda_forecast"
+      subsection_map:
+        "Property Taxes": "property_taxes"
+        "Labor Costs": "labor_costs"
+        "Expense Growth Forecast": "expense_forecast"
+      extract:
+        - narrative
+        - forecast_period               # Denver Expense Growth Forecast table
+
+    - larc_heading: "Investment Forecast Model"
+      canonical_section: "investment_forecast_model"
+      extract:
+        - forecast_summary.cap_rate_forecast
+        - sensitivity_table
+
+    - larc_heading: "Historical Submarket Indices to Denver Market"
+      canonical_section: null
+      extract:
+        - submarket_index[index_type=submarket]
+
+    - larc_heading: "Historical Property Class Indices"
+      canonical_section: null
+      extract:
+        - submarket_index[index_type=property_class]
+
+    - larc_heading: "Forecast Revision Summary"
+      canonical_section: "forecast_revision_summary"
+      extract:
+        - forecast_revision               # compares current forecast to prior
+
+# ============================================================================
+# VALUE TRANSFORMATIONS
+# ============================================================================
+transforms:
+  percentages_as_decimals: true     # LARC stores 0.013 for 1.3%; keep as decimal
+  transaction_price_scale: 1000      # LARC reports Price (000); multiply for USD
+  basis_points_stay_integer: true
+  value_index_base_year: 2019

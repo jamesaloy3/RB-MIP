@@ -1,0 +1,281 @@
+# Provider registry — declarative expectations for each data source.
+# The pipeline uses this for routing, validation thresholds, and UI display.
+
+providers:
+
+  - code: LARC
+    display_name: "Lodging Analytics Research & Consulting"
+    website: "https://larcanalytics.com"
+    publication_cadence: quarterly
+
+    doc_types:
+
+      - doc_type: larc_hotelbis
+        display_name: "LARC HotelBIS Data File"
+        adapter: "adapters.larc.hotelbis.HotelBISAdapter"
+        file_patterns:
+          - "*HotelBIS*Data*.xlsx"
+          - "*_HotelBIS_*.xlsx"
+        upload_folder: "larc/hotelbis"
+        markets: all                   # covers all ~76 markets in one file
+        period_types: [quarterly, annual]
+        destination_tables: [forecast_periods]
+        required_columns:
+          - Market
+          - Published
+          - Year
+          - Period
+          - Supply
+          - Demand
+          - Occupancy
+          - ADR
+          - RevPAR
+        optional_columns:
+          - Revenues
+          - "Wage Growth"
+          - "Property Tax Growth"
+          - "Hotel EBITDA Margin"
+          - "Hotel EBITDA"
+          - "Cap Rate"
+          - "Hotel Value (Indexed to 2019)"
+        validation:
+          revpar_adr_occ_tolerance_pct: 2.0
+          occupancy_range: [0.0, 1.0]    # stored as decimal
+          adr_min_usd: 50
+          adr_max_usd: 1000
+
+      - doc_type: larc_convention
+        display_name: "LARC Aggregated Convention Center Data"
+        adapter: "adapters.larc.convention.ConventionAdapter"
+        file_patterns:
+          - "*Convention*Center*Data*.xlsx"
+          - "*Aggregated*Convention*.xlsx"
+        upload_folder: "larc/convention"
+        target_sheet: "CC BIS Data"    # skip Sheet1 (presentation pivot)
+        markets: partial               # only convention cities (subset of HotelBIS)
+        period_types: [annual, quarterly]
+        destination_tables: [convention_bookings]
+        required_columns:
+          - Market
+          - Published
+          - Year
+          - Period
+          - "Definite Room Nights"
+        optional_columns:
+          - "YoY Booking Pace"
+          - "Pace Relative to 2019"
+
+      - doc_type: larc_narrative
+        display_name: "LARC Market Intelligence Report (PDF)"
+        adapter: "adapters.larc.narrative.NarrativeAdapter"
+        file_patterns:
+          - "LARC*Market*.pdf"
+          - "LARC*.pdf"
+        upload_folder: "larc/narrative"
+        markets: single                # one market per PDF
+        destination_tables: [narratives, transactions, supply_pipeline]
+        extraction:
+          method: hybrid               # pdfplumber text layer → OCR fallback
+          ocr_fallback: pytesseract
+          section_detection: heading_regex
+        canonical_sections:
+          - executive_summary
+          - national_backdrop
+          - operating_results_review
+          - msa_economic_summary
+          - major_local_real_estate_developments
+          - lodging_demand_drivers
+          - convention_center
+          - air_traffic
+          - office_market
+          - lodging_supply
+          - home_sharing_supply
+          - home_sharing_regulation
+          - recent_transactions
+          - revenue_forecast_models
+          - ebitda_forecast
+          - expense_forecast
+          - investment_forecast_model
+          - cap_rate_spreads
+          - investment_value_change
+          - forecast_revision_summary
+
+  - code: CoStar
+    display_name: "CoStar Group"
+    website: "https://costar.com"
+    publication_cadence: monthly
+
+    doc_types:
+
+      - doc_type: costar_str
+        display_name: "CoStar STR Analytic Export"
+        adapter: "adapters.costar.str_data.CoStarSTRAdapter"
+        file_patterns:
+          - "DataExport*.xlsx"
+          - "CoStar*Export*.xlsx"
+          - "*AnalyticExport*.xlsx"
+        upload_folder: "costar/str"
+        target_sheet: "AnalyticExport"
+        markets: partial               # covers only submarkets in the export
+        period_types: [rolling_12mo]
+        destination_tables: [forecast_periods]
+        required_columns:
+          - Period
+          - "Geography Name"
+          - Market
+          - Submarket
+          - "12 Mo ADR"
+          - "12 Mo Occupancy"
+          - "12 Mo Demand"
+        geography_name_delimiter: " - "
+        # e.g. "Austin - TX USA - Austin CBD"
+        #       market_part = "Austin - TX USA"
+        #       submarket_part = "Austin CBD"
+        validation:
+          occupancy_range: [0.0, 1.0]
+          adr_min_usd: 30
+          adr_max_usd: 2000
+
+      - doc_type: costar_narrative
+        display_name: "CoStar Submarket Intelligence Report (PDF)"
+        adapter: "adapters.costar.narrative.CoStarNarrativeAdapter"
+        file_patterns:
+          - "*Hospitality*Submarket*.pdf"
+          - "CoStar*Submarket*.pdf"
+        upload_folder: "costar/narrative"
+        markets: single                # one submarket per PDF
+        destination_tables: [narratives]
+        extraction:
+          method: hybrid
+          ocr_fallback: pytesseract
+        canonical_sections:
+          - executive_summary
+          - operating_results_review
+          - msa_economic_summary
+          - lodging_demand_drivers
+          - lodging_supply
+          - recent_transactions
+          - investment_forecast_model
+
+  - code: GreenStreet
+    display_name: "Green Street Advisors"
+    website: "https://greenstreetadvisors.com"
+    publication_cadence: quarterly
+
+    doc_types:
+
+      - doc_type: greenstreet
+        display_name: "Green Street Fundamentals and Valuation Data (Lodging)"
+        adapter: "adapters.greenstreet.fundamentals.GreenStreetAdapter"
+        file_patterns:
+          - "GreenStreet*Fundamentals*Valuation*.xlsx"
+          - "GreenStreet*Lodging*.xlsx"
+          - "Green*Street*Lodging*.xlsx"
+        upload_folder: "greenstreet"
+        markets: all                   # all US markets in one file
+        destination_tables:
+          - forecast_periods
+          - green_street_grades
+          - green_street_irr
+          - gs_submarket_cap_rates
+
+        sheets:
+          # All sheets have a title block rows 1–3; headers at row 4
+          # Forecast/scenario sheets have headers at row 5 (extra description row)
+
+          - name: "Baseline Forecast"
+            destination: forecast_periods
+            scenario: baseline
+            header_row: 5              # 0-indexed → pandas skiprows=4
+            period_type: quarterly
+            date_column: "Date"        # "3/31/2005" style
+            market_column: "Market"
+            metric_columns:
+              demand_growth_pct:      "Demand Growth"
+              occupancy:              "Occupancy"
+              effective_rent:         "Effective Rent"
+              effective_rent_growth_pct: "Effective Rent Growth"
+              m_revpaf_growth_pct:    "M-RevPAF Growth"
+              noi_index:              "Net Operating Income (NOI) Ind"
+              noi_growth_pct:         "Net Operating Income (NOI) Gro"
+              cap_rate:               "Nominal Cap Rate"
+              supply_growth_pct:      "Supply Growth"
+              supply_index:           "Supply Index"
+              ncf_growth_pct:         "Net Cash Flow (NCF) Growth"
+              cppi_index:             "Commercial Property Price Inde"
+
+          - name: "Exceptionally Strong Growth"
+            destination: forecast_periods
+            scenario: strong_growth
+            header_row: 5
+            period_type: quarterly
+            date_column: "Date"
+            market_column: "Market"
+            # same metric_columns as Baseline Forecast
+
+          - name: "Moderate Recession"
+            destination: forecast_periods
+            scenario: moderate_recession
+            header_row: 5
+            period_type: quarterly
+            date_column: "Date"
+            market_column: "Market"
+
+          - name: "Protracted Slump"
+            destination: forecast_periods
+            scenario: protracted_slump
+            header_row: 5
+            period_type: quarterly
+            date_column: "Date"
+            market_column: "Market"
+
+          - name: "Stronger Near-Term Growth"
+            destination: forecast_periods
+            scenario: near_term_strong
+            header_row: 5
+            period_type: quarterly
+            date_column: "Date"
+            market_column: "Market"
+
+          - name: "Baseline Fundamentals"
+            destination: forecast_periods
+            scenario: null             # historical actuals
+            header_row: 4
+            period_type: annual
+            layout: wide              # years as columns, metric sections as row blocks
+            market_id_col: 1          # col B (0-indexed)
+            market_name_col: 2        # col C
+            year_columns_start: 3     # col D onwards
+            # Metric section rows identified by empty market_id cell + non-empty label in col B
+
+          - name: "Asset Values"
+            destination: forecast_periods
+            scenario: null
+            header_row: 4
+            period_type: quarterly
+            layout: wide              # dates as columns, metric sections as row blocks
+            # Similar to Baseline Fundamentals but with quarterly date headers
+
+          - name: "Market Grades"
+            destination: green_street_grades
+            header_row: 4
+            layout: flat
+            id_column: "Market ID"
+            market_column: "Market"
+
+          - name: "Risk-Adjusted IRRs"
+            destination: green_street_irr
+            header_row: 4
+            layout: flat
+            id_column: "Market ID"
+            market_column: "Market"
+
+          - name: "Submarket and Zip Cap Rates"
+            destination: gs_submarket_cap_rates
+            header_row: 4
+            layout: flat
+            id_column: "Market ID"
+            market_column: "Market"
+            submarket_id_column: "Submarket ID"
+            submarket_column: "Submarket"
+            zip_column: "Zip Code"

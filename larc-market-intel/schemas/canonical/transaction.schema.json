@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcwhinney.internal/schemas/canonical/transaction.schema.json",
+  "title": "Transaction",
+  "description": "A recent hotel sale reported in the Recent Transactions section.",
+  "type": "object",
+  "required": ["publication_id", "market", "property_name", "sale_date"],
+  "properties": {
+    "publication_id": { "type": "string" },
+    "market": { "type": "string" },
+    "property_name": { "type": "string" },
+    "sale_date": {
+      "type": "string",
+      "description": "Month-year as reported (e.g., 'Dec-25'). Normalized to ISO date where possible.",
+      "pattern": "^(\\d{4}-\\d{2}(-\\d{2})?|[A-Z][a-z]{2}-\\d{2})$"
+    },
+    "sale_date_iso": { "type": ["string", "null"], "format": "date" },
+    "submarket": { "type": ["string", "null"] },
+    "units": { "type": ["integer", "null"], "minimum": 1 },
+    "price_total_usd": { "type": ["number", "null"], "description": "Total price USD (not thousands)." },
+    "price_per_unit_usd": { "type": ["number", "null"] },
+    "buyer": { "type": ["string", "null"] },
+    "seller": { "type": ["string", "null"] },
+    "larc_score": {
+      "type": ["integer", "null"],
+      "minimum": 0,
+      "maximum": 100,
+      "description": "LARC Score (location quality index). Only populated for LARC reports."
+    },
+    "notes": { "type": ["string", "null"] }
+  }
+}

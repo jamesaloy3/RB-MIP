@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcwhinney.internal/schemas/canonical/economic_indicators.schema.json",
+  "title": "EconomicIndicator",
+  "description": "MSA-level economic metrics that drive lodging forecasts.",
+  "type": "object",
+  "required": ["publication_id", "market", "indicator", "value"],
+  "properties": {
+    "publication_id": { "type": "string" },
+    "market": { "type": "string" },
+    "indicator": {
+      "type": "string",
+      "enum": [
+        "gmp_growth",
+        "gmp_level",
+        "non_farm_jobs",
+        "office_employment",
+        "unemployment_rate",
+        "cpi_annualized",
+        "population",
+        "retail_sales",
+        "household_income",
+        "minimum_wage"
+      ]
+    },
+    "value": { "type": ["number", "null"] },
+    "unit": {
+      "type": "string",
+      "enum": ["percent", "count", "usd", "index", "bps"]
+    },
+    "year": { "type": ["integer", "null"] },
+    "quarter": { "type": ["integer", "null"], "minimum": 1, "maximum": 4 },
+    "is_forecast": { "type": "boolean" },
+    "source": { "type": ["string", "null"], "description": "E.g., 'Moody's Analytics', 'BLS'" }
+  }
+}

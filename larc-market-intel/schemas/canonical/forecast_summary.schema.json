@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcwhinney.internal/schemas/canonical/forecast_summary.schema.json",
+  "title": "ForecastSummary",
+  "description": "Publication-level summary of CAGRs, rankings, and key assumptions. Denormalized for fast dashboard reads. One row per (publication, market).",
+  "type": "object",
+  "required": ["publication_id", "market"],
+  "properties": {
+    "publication_id": { "type": "string" },
+    "market": { "type": "string" },
+
+    "cagr_3yr": { "$ref": "#/$defs/CagrBlock" },
+    "cagr_5yr": { "$ref": "#/$defs/CagrBlock" },
+
+    "ranking_among_markets": {
+      "type": "object",
+      "description": "E.g., 'ranks 16th of 62 markets'. Populated from narrative extraction.",
+      "properties": {
+        "gmp_growth":    { "$ref": "#/$defs/Ranking" },
+        "supply_growth": { "$ref": "#/$defs/Ranking" },
+        "occupancy":     { "$ref": "#/$defs/Ranking" },
+        "adr":           { "$ref": "#/$defs/Ranking" },
+        "revpar":        { "$ref": "#/$defs/Ranking" },
+        "ebitda":        { "$ref": "#/$defs/Ranking" },
+        "value_change":  { "$ref": "#/$defs/Ranking" },
+        "cap_rate_change": { "$ref": "#/$defs/Ranking" }
+      }
+    },
+
+    "cap_rate_forecast": {
+      "type": "object",
+      "properties": {
+        "end_of_forecast_cap_rate": { "type": ["number", "null"] },
+        "expected_bps_expansion_vs_us": { "type": ["number", "null"] },
+        "model_r_squared": { "type": ["number", "null"] },
+        "model_standard_error_bps": { "type": ["number", "null"] }
+      }
+    },
+
+    "revpar_model": {
+      "type": "object",
+      "description": "Regression drivers and fit statistics (e.g., LARC RevPAR model).",
+      "properties": {
+        "r_squared": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+        "standard_error_pct": { "type": ["number", "null"] },
+        "drivers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "correlation": { "type": "number" }
+            }
+          }
+        }
+      }
+    },
+
+    "adr_model": { "$ref": "#/properties/revpar_model" },
+
+    "economic_assumptions": {
+      "type": "object",
+      "description": "Macro assumptions (Moody's-sourced in LARC).",
+      "properties": {
+        "gmp_cagr_3yr": { "type": ["number", "null"] },
+        "gmp_cagr_5yr": { "type": ["number", "null"] },
+        "non_farm_jobs_cagr_3yr": { "type": ["number", "null"] },
+        "non_farm_jobs_cagr_5yr": { "type": ["number", "null"] },
+        "unemployment_change_bps_3yr": { "type": ["number", "null"] },
+        "unemployment_change_bps_5yr": { "type": ["number", "null"] },
+        "population_cagr_3yr": { "type": ["number", "null"] }
+      }
+    }
+  },
+
+  "$defs": {
+    "CagrBlock": {
+      "type": "object",
+      "properties": {
+        "occupancy": { "type": ["number", "null"] },
+        "adr": { "type": ["number", "null"] },
+        "revpar": { "type": ["number", "null"] },
+        "supply": { "type": ["number", "null"] },
+        "ebitda": { "type": ["number", "null"] },
+        "value": { "type": ["number", "null"] },
+        "gmp": { "type": ["number", "null"] }
+      }
+    },
+    "Ranking": {
+      "type": ["object", "null"],
+      "properties": {
+        "rank": { "type": "integer", "minimum": 1 },
+        "of": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

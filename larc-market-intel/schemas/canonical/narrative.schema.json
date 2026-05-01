@@ -1,0 +1,140 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcwhinney.internal/schemas/canonical/narrative.schema.json",
+  "title": "Narrative",
+  "description": "A single narrative passage from a market intelligence report, tagged by section and theme. The qualitative counterpart to ForecastPeriod.",
+  "type": "object",
+  "required": [
+    "publication_id",
+    "market",
+    "section",
+    "text"
+  ],
+  "properties": {
+    "publication_id": { "type": "string", "pattern": "^[a-f0-9]{40}$" },
+    "market": { "type": "string" },
+
+    "section": {
+      "type": "string",
+      "enum": [
+        "executive_summary",
+        "forecast_commentary",
+        "national_backdrop",
+        "operating_results_review",
+        "msa_economic_summary",
+        "major_local_real_estate_developments",
+        "lodging_demand_drivers",
+        "convention_center",
+        "air_traffic",
+        "office_market",
+        "lodging_supply",
+        "home_sharing_supply",
+        "home_sharing_regulation",
+        "recent_transactions",
+        "revenue_forecast_models",
+        "revpar_model_drivers",
+        "adr_model_drivers",
+        "occupancy_model_drivers",
+        "ebitda_forecast",
+        "property_taxes",
+        "labor_costs",
+        "expense_forecast",
+        "investment_forecast_model",
+        "cap_rate_spreads",
+        "investment_value_change",
+        "forecast_revision_summary",
+        "risks_and_headwinds",
+        "tailwinds",
+        "other"
+      ],
+      "description": "Standardized section taxonomy across providers. Extractor must map provider-specific headings to this list."
+    },
+
+    "subsection": {
+      "type": ["string", "null"],
+      "description": "Provider's original heading, preserved for fidelity."
+    },
+
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The narrative passage. Preserved verbatim where possible; paraphrased if necessary to avoid reproduction of copyrighted content at length. One passage = one logical paragraph or grouped bullets."
+    },
+
+    "ordinal": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Sequence order within the section, for preserving reading order."
+    },
+
+    "page_references": {
+      "type": "array",
+      "items": { "type": "integer", "minimum": 1 },
+      "description": "Pages in source PDF where this passage appears."
+    },
+
+    "entities": {
+      "type": "array",
+      "description": "Structured tags extracted from the passage — drives search and cross-linking.",
+      "items": {
+        "type": "object",
+        "required": ["type", "value"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "company",
+              "hotel",
+              "submarket",
+              "development_project",
+              "transportation_asset",
+              "event",
+              "metric",
+              "policy",
+              "person",
+              "date_reference",
+              "dollar_amount",
+              "percentage",
+              "ranking"
+            ]
+          },
+          "value": { "type": "string" },
+          "normalized_value": {
+            "description": "Optional canonical form (e.g., '$812M' → 812000000).",
+            "type": ["number", "string", "null"]
+          }
+        }
+      }
+    },
+
+    "key_metrics_referenced": {
+      "type": "array",
+      "description": "When the narrative states specific numbers that should match the quantitative data, tag them here for cross-validation.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "metric": {
+            "type": "string",
+            "enum": ["revpar_cagr", "adr_cagr", "occupancy_cagr", "supply_cagr", "gmp_cagr", "ebitda_cagr", "cap_rate_change_bps", "value_change_pct"]
+          },
+          "period_years": { "type": "integer" },
+          "value": { "type": "number" },
+          "ranking": {
+            "type": ["integer", "null"],
+            "description": "E.g., 'ranks 16th of 62 markets' → 16"
+          },
+          "ranking_universe": {
+            "type": ["integer", "null"],
+            "description": "E.g., 'of 62 markets' → 62"
+          }
+        }
+      }
+    },
+
+    "sentiment": {
+      "type": "string",
+      "enum": ["positive", "neutral", "negative", "mixed"],
+      "description": "For dashboarding — quick visual of how narrative on a section reads."
+    }
+  }
+}

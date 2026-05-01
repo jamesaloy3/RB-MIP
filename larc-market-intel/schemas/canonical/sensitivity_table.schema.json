@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcwhinney.internal/schemas/canonical/sensitivity_table.schema.json",
+  "title": "SensitivityTable",
+  "description": "Regression model sensitivity matrix (RevPAR CAGR vs Unemployment x Jobs CAGR, etc.)",
+  "type": "object",
+  "required": ["publication_id", "market", "model", "horizon_years", "x_axis", "y_axis", "cells"],
+  "properties": {
+    "publication_id": { "type": "string" },
+    "market": { "type": "string" },
+    "model": {
+      "type": "string",
+      "enum": ["revpar_cagr", "adr_cagr", "demand_growth_cagr", "cap_rate_spread_change"]
+    },
+    "horizon_years": { "type": "integer", "enum": [3, 5] },
+    "x_axis": {
+      "type": "object",
+      "required": ["variable", "values"],
+      "properties": {
+        "variable": { "type": "string", "description": "E.g., 'unemployment_change_bps'" },
+        "unit": { "type": "string", "enum": ["percent", "bps"] },
+        "values": {
+          "type": "array",
+          "items": { "type": "number" }
+        }
+      }
+    },
+    "y_axis": { "$ref": "#/properties/x_axis" },
+    "cells": {
+      "type": "array",
+      "description": "Row-major ordering: cells[i*len(x)+j] corresponds to y_axis.values[i], x_axis.values[j].",
+      "items": { "type": ["number", "null"] }
+    },
+    "baseline_cell": {
+      "type": ["object", "null"],
+      "description": "Which cell LARC has highlighted as the baseline (boxed in the report).",
+      "properties": {
+        "x_value": { "type": "number" },
+        "y_value": { "type": "number" },
+        "output_value": { "type": "number" }
+      }
+    }
+  }
+}

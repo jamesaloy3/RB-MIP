@@ -1,0 +1,81 @@
+# CoStar Field Mapping to Canonical Schema
+# Fill in actual column names / section headings when first CoStar file is available.
+# The canonical schema is provider-agnostic, so only this mapping file + an extractor class need to change.
+# Version: 0.1.0 (skeleton)
+
+provider: CoStar
+
+# ============================================================================
+# XLSX MAPPING
+# CoStar distributes a Market Analytics export — structure TBD until first file lands.
+# Populate column_map with CoStar's column headers.
+# ============================================================================
+xlsx:
+  # Confirmed from CoStar Hospitality Market Analytics exports in general usage —
+  # verify against actual file before first production ingest.
+  sheet_name: "Market Data"
+  row_identifier:
+    market_col: "Market"
+    year_col: "Year"
+    period_col: "Quarter"
+  publication_metadata:
+    publication_date_col: "As Of Date"
+    publication_date_format: "%m/%d/%Y"
+  column_map:
+    # CoStar column                    → canonical field
+    "Available Room Nights":            "supply"
+    "Occupied Room Nights":             "demand"
+    "Occupancy Rate":                   "occupancy"
+    "ADR":                              "adr"
+    "RevPAR":                           "revpar"
+    "Total Revenue":                    "revenues"
+    # CoStar does not natively publish EBITDA / Cap Rate at this granularity;
+    # those come from CoStar's investment analytics feed (separate file).
+    "Cap Rate":                         "cap_rate"
+    "Price Per Key":                    null   # transactions feed
+  period_type_resolver:
+    annual_marker: "Annual"
+    quarterly_format: "Q1" # e.g., Q1, Q2, Q3, Q4
+  is_forecast_resolver:
+    forecast_start_rule: "year_quarter >= publication_year_quarter"
+
+# ============================================================================
+# PDF MAPPING
+# CoStar market reports use a different sectioning convention; map to canonical below.
+# ============================================================================
+pdf:
+  sections:
+    - costar_heading: "Market Overview"
+      canonical_section: "executive_summary"
+
+    - costar_heading: "Supply & Demand"
+      canonical_section: "lodging_supply"
+
+    - costar_heading: "Performance Trends"
+      canonical_section: "operating_results_review"
+
+    - costar_heading: "Pipeline"
+      canonical_section: "lodging_supply"
+      tables:
+        "Pipeline":
+          target: supply_pipeline
+
+    - costar_heading: "Sales Comparables"
+      canonical_section: "recent_transactions"
+      tables:
+        "Recent Sales":
+          target: transaction
+
+    - costar_heading: "Economic Indicators"
+      canonical_section: "msa_economic_summary"
+
+    - costar_heading: "Forecast"
+      canonical_section: "forecast_commentary"
+
+# ============================================================================
+# VALUE TRANSFORMATIONS
+# ============================================================================
+transforms:
+  percentages_as_decimals: false    # CoStar typically reports "67.3", not 0.673 — confirm
+  percentages_division_factor: 100
+  transaction_price_scale: 1        # Confirm whether in millions or raw USD

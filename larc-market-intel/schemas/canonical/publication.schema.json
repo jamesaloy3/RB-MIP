@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcwhinney.internal/schemas/canonical/publication.schema.json",
+  "title": "Publication",
+  "description": "A single market intelligence report from a provider. Uniquely keyed by (provider, market, publication_date, doc_type).",
+  "type": "object",
+  "required": [
+    "publication_id",
+    "provider",
+    "doc_type",
+    "market",
+    "publication_date",
+    "source_file",
+    "ingested_at",
+    "schema_version"
+  ],
+  "properties": {
+    "publication_id": {
+      "type": "string",
+      "description": "Deterministic hash-based ID: sha1(provider|market|publication_date|doc_type). Enables idempotent re-ingest.",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "provider": {
+      "type": "string",
+      "enum": ["LARC", "CoStar", "HVS", "PwC", "STR", "Other"]
+    },
+    "doc_type": {
+      "type": "string",
+      "enum": ["market_intelligence_report", "data_file", "forecast_update", "transaction_report"],
+      "description": "PDF narrative reports are 'market_intelligence_report'; structured xlsx dumps are 'data_file'."
+    },
+    "market": {
+      "$ref": "#/$defs/Market"
+    },
+    "publication_date": {
+      "type": "string",
+      "format": "date",
+      "description": "ISO date of publication (e.g., '2026-03-01' for 1Q-2026 report)"
+    },
+    "publication_period": {
+      "type": "string",
+      "pattern": "^[1-4]Q-\\d{4}$",
+      "description": "Fiscal period label, e.g., '1Q-2026'"
+    },
+    "forecast_start_period": {
+      "type": "string",
+      "pattern": "^[1-4]Q-\\d{4}$",
+      "description": "First quarter treated as forecast (not actual) in this publication"
+    },
+    "forecast_end_year": {
+      "type": "integer",
+      "minimum": 2020,
+      "maximum": 2050
+    },
+    "source_file": {
+      "type": "object",
+      "required": ["filename", "sha256", "bytes"],
+      "properties": {
+        "filename": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "bytes": { "type": "integer", "minimum": 1 },
+        "original_path": { "type": "string" }
+      }
+    },
+    "licensee": {
+      "type": "string",
+      "description": "Extracted from PDF watermark (e.g., 'James.Lambert@mcwhinney.com')"
+    },
+    "ingested_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "extractor_version": {
+      "type": "string",
+      "description": "Semver of extractor that produced this record. Enables re-processing on extractor upgrades."
+    },
+    "schema_version": {
+      "type": "string",
+      "const": "1.0.0"
+    },
+    "confidence": {
+      "type": "object",
+      "description": "Per-section extraction confidence, for triage of LLM-extracted content.",
+      "properties": {
+        "overall": { "type": "number", "minimum": 0, "maximum": 1 },
+        "forecast_tables": { "type": "number", "minimum": 0, "maximum": 1 },
+        "narrative": { "type": "number", "minimum": 0, "maximum": 1 },
+        "transactions": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "Market": {
+      "type": "object",
+      "required": ["canonical_name"],
+      "properties": {
+        "canonical_name": {
+          "type": "string",
+          "description": "Canonical market name (e.g., 'Denver'). Resolved via canonical market list + aliases."
+        },
+        "provider_name": {
+          "type": "string",
+          "description": "As-reported name by provider, before canonicalization."
+        },
+        "msa_code": {
+          "type": "string",
+          "description": "CBSA/MSA code if available, e.g., '19740' for Denver-Aurora-Lakewood."
+        },
+        "state": { "type": "string", "pattern": "^[A-Z]{2}$" },
+        "country": { "type": "string", "default": "US" }
+      }
+    }
+  }
+}

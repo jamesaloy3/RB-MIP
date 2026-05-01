@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcwhinney.internal/schemas/canonical/supply_pipeline.schema.json",
+  "title": "SupplyPipelineItem",
+  "description": "A single planned or under-construction hotel development.",
+  "type": "object",
+  "required": ["publication_id", "market", "hotel_name", "development_phase"],
+  "properties": {
+    "publication_id": { "type": "string" },
+    "market": { "type": "string" },
+    "hotel_name": { "type": "string" },
+    "submarket": { "type": ["string", "null"] },
+    "rooms": { "type": ["integer", "null"], "minimum": 1 },
+    "development_phase": {
+      "type": "string",
+      "enum": ["Under Construction", "Planning", "Announced", "Final Planning", "Delayed", "Cancelled"]
+    },
+    "projected_opening": {
+      "type": ["string", "null"],
+      "description": "As reported: '1Q-2026', '3Q-2027', etc.",
+      "pattern": "^[1-4]Q-\\d{4}$"
+    },
+    "projected_opening_date_iso": { "type": ["string", "null"], "format": "date" },
+    "brand_family": { "type": ["string", "null"], "description": "E.g., Marriott, Hilton, Hyatt, IHG, Independent." },
+    "scale": {
+      "type": ["string", "null"],
+      "enum": ["Luxury", "Upper Upscale", "Upscale", "Upper Midscale", "Midscale", "Economy", null]
+    },
+    "source": { "type": ["string", "null"] }
+  }
+}

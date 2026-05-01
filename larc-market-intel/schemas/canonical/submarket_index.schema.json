@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mcwhinney.internal/schemas/canonical/submarket_index.schema.json",
+  "title": "SubmarketIndex",
+  "description": "Historical submarket or property-class performance indexed to the overall market. E.g., Denver CBD occupancy was 100.7% of Denver market average in 2025.",
+  "type": "object",
+  "required": ["publication_id", "market", "index_type", "index_name", "year"],
+  "properties": {
+    "publication_id": { "type": "string" },
+    "market": { "type": "string" },
+    "index_type": {
+      "type": "string",
+      "enum": ["submarket", "property_class"]
+    },
+    "index_name": {
+      "type": "string",
+      "description": "Submarket name (e.g., 'Denver CBD') or property class (e.g., 'Luxury', 'Upper Upscale')."
+    },
+    "year": { "type": "integer", "minimum": 1995, "maximum": 2050 },
+    "occupancy_index": {
+      "type": ["number", "null"],
+      "description": "Decimal index where 1.00 = market average. E.g., 1.007 = 100.7% of market."
+    },
+    "adr_index": { "type": ["number", "null"] },
+    "revpar_index": { "type": ["number", "null"] },
+    "room_count": { "type": ["integer", "null"] },
+    "percent_of_market": {
+      "type": ["number", "null"],
+      "description": "Share of total market room count (decimal). E.g., 0.26 = 26%."
+    }
+  }
+}
