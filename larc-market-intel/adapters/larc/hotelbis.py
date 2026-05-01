@@ -1,4 +1,4 @@
-"""LARC HotelBIS adapter — quarterly + annual hotel fundamentals.
+"""LARC HotelBIS adapter — rolling-12-month + annual hotel fundamentals.
 
 Source: single-sheet Excel.
 Columns: Market | Published | Year | Period | Supply | Demand | Occupancy |
@@ -6,7 +6,7 @@ Columns: Market | Published | Year | Period | Supply | Demand | Occupancy |
          Hotel EBITDA Margin | Hotel EBITDA | Cap Rate |
          Hotel Value (Indexed to 2019)
 
-Period encodes 1–4 for quarters, "A" for annual.
+Period encodes 1–4 for quarter-ending trailing-12-month snapshots, "A" for annual.
 """
 from __future__ import annotations
 
@@ -180,7 +180,7 @@ class HotelBISAdapter(BaseAdapter):
         period_str = str(period_raw).strip().upper() if period_raw is not None else ""
         if period_str in ("1", "2", "3", "4"):
             quarter = int(period_str)
-            period_type = "quarterly"
+            period_type = "rolling_12mo"
             is_forecast = (year, quarter) > (pub_year, pub_quarter)
         elif period_str in ("A", "ANNUAL", "Y", "YR", ""):
             quarter = None
@@ -192,7 +192,7 @@ class HotelBISAdapter(BaseAdapter):
                 q = int(float(period_str))
                 if 1 <= q <= 4:
                     quarter = q
-                    period_type = "quarterly"
+                    period_type = "rolling_12mo"
                     is_forecast = (year, quarter) > (pub_year, pub_quarter)
                 else:
                     raise _SkipRow(f"unknown Period '{period_raw}'")

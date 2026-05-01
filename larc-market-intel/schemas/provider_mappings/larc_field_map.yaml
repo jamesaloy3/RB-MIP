@@ -33,7 +33,7 @@ xlsx:
     "Cap Rate":            "cap_rate"
     "Hotel Value (Indexed to 2019)": "hotel_value_index_2019"
   period_type_resolver:
-    # When Period == 'A', this is annual; otherwise quarterly with quarter = int(Period)
+    # When Period == 'A', this is annual; otherwise rolling_12mo with quarter = int(Period)
     annual_marker: "A"
   is_forecast_resolver:
     # Rows with Year >= forecast_start_year AND Period NOT yet reported are forecast.
