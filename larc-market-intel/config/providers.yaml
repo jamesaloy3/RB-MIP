@@ -18,7 +18,7 @@ providers:
           - "*_HotelBIS_*.xlsx"
         upload_folder: "larc/hotelbis"
         markets: all                   # covers all ~76 markets in one file
-        period_types: [quarterly, annual]
+        period_types: [rolling_12mo, annual]
         destination_tables: [forecast_periods]
         required_columns:
           - Market
